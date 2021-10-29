@@ -1,14 +1,26 @@
-# Welcome to your CDK TypeScript project!
+## Shared services stack
 
-This is a blank project for TypeScript development with CDK.
+### Purpose
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+The purpose of this codebase is to deploy the shared resources for the voting application.
+This project, via the AWS CDK, will create resources that are shared amongst the various services within the application.
 
-## Useful commands
+### Getting started
 
- * `npm run build`   compile typescript to js
- * `npm run watch`   watch for changes and compile
- * `npm run test`    perform the jest unit tests
- * `cdk deploy`      deploy this stack to your default AWS account/region
- * `cdk diff`        compare deployed stack with current state
- * `cdk synth`       emits the synthesized CloudFormation template
+Install dependencies
+
+```
+npm install
+```
+
+Synthesize the cloud assembly code
+
+```
+cdk synth
+```
+
+Deploy the environment
+
+```
+cdk deploy --require-approval never
+```
