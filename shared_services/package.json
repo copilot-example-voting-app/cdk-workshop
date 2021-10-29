@@ -22,6 +22,9 @@
   },
   "dependencies": {
     "@aws-cdk/core": "1.130.0",
+    "@aws-cdk/aws-ec2": "1.130.0",
+    "@aws-cdk/aws-ecs": "1.130.0",
+    "@aws-cdk-containers/ecs-service-extensions": "1.130.0",
     "source-map-support": "^0.5.16"
   }
 }
