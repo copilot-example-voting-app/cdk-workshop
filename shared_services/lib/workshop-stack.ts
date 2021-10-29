@@ -6,23 +6,25 @@ export class SharedResourcesStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const vpc = new ec2.Vpc(this, "WorkshopVPC", {});
+    const sharedVpc = new ec2.Vpc(this, "WorkshopVPC", {});
+
     const ecsCluster = new ecs.Cluster(this, "WorkshopCluster", {
-      vpc: vpc,
+      vpc: sharedVpc,
       enableFargateCapacityProviders: true,
       executeCommandConfiguration: {},
     });
+
     const sdNamespace = ecsCluster.addDefaultCloudMapNamespace({
       name: "dev.workshop.local",
-      vpc: vpc,
+      vpc: sharedVpc,
     });
 
     // CFN Outputs for shared resources to be imported with other stacks
-    new cdk.CfnOutput(this, "WorkshopVPC", {
-      value: vpc.vpcId,
+    new cdk.CfnOutput(this, "WorkshopVPCOutput", {
+      value: sharedVpc.vpcId,
       exportName: "WorkshopVPC",
     });
-    new cdk.CfnOutput(this, "WorkshopCluster", {
+    new cdk.CfnOutput(this, "WorkshopClusterOutput", {
       value: ecsCluster.clusterName,
       exportName: "WorkshopClusterName",
     });
