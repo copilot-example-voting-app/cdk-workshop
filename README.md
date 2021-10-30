@@ -28,6 +28,7 @@ Let's get setup with the environment stack, and rename `lib/cdk-workshop.ts` to 
 
 ### API Stack
 * Create a new `lib/api.ts` for APIService
+* Checkout api locally. `git clone https://github.com/copilot-example-voting-app/api`
 * Use CDKExtensions to create a new ServiceDescription for `api` microservice
 * Add Aurora storage and inject the right secrets and environment variables to api service
 * npm install
@@ -36,6 +37,7 @@ Let's get setup with the environment stack, and rename `lib/cdk-workshop.ts` to 
 
 ### Vote Stack
 * Create a new `lib/vote.ts` for VoteService
+* Checkout vote locally. `git clone https://github.com/copilot-example-voting-app/vote`
 * Use CDKExtensions to create a new ServiceDescription for `vote` microservice
 * Add SNS Topic and make an accessor for it to be used in `processor` service
 * npm install
@@ -43,7 +45,8 @@ Let's get setup with the environment stack, and rename `lib/cdk-workshop.ts` to 
 * cdk deploy --all
 
 ### Processor Stack
-* Create a new `lib/vote.ts` for VoteService
+* Create a new `lib/processor.ts` for VoteService
+* Checkout processor locally. `git clone https://github.com/copilot-example-voting-app/processor`
 * Use CDKExtensions to create a new Queue based ServiceDescription for `processor` microservice
 * Use the sns topic from vote as input
 * npm install
@@ -52,6 +55,7 @@ Let's get setup with the environment stack, and rename `lib/cdk-workshop.ts` to 
 
 ### Results Stack
 * Create a new `lib/results.ts` for ResultsService
+* Checkout results locally. `git clone https://github.com/copilot-example-voting-app/results`
 * Use CDKExtensions to create a new ServiceDescription for `results` microservice and attached a Load Balancer Extension 
 * npm install
 * cdk synth
