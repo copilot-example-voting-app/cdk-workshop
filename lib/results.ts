@@ -13,8 +13,7 @@ export class ResultsService extends cdk.Stack {
       cpu: 256,
       memoryMiB: 512,
       trafficPort: 8080,
-      // image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '../../results/'), {file: 'Dockerfile'}),
-      image: ecs.ContainerImage.fromRegistry('test'),
+      image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '../../results/'), {file: 'Dockerfile'}),
       environment: {
         COPILOT_SERVICE_DISCOVERY_ENDPOINT: props.serviceDiscoveryName,
       },

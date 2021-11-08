@@ -19,8 +19,7 @@ export class ProcessorService extends cdk.Stack {
         cpu: 1024,
         memoryMiB: 2048,
         trafficPort: 80,
-        // image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '../../processor/'), {file: 'Dockerfile'}),
-        image: ecs.ContainerImage.fromRegistry('test')
+        image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '../../processor/'), {file: 'Dockerfile'}),
       }));
 
       const service = new extensions.Service(this, 'processor-service', {

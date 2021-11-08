@@ -17,8 +17,7 @@ export class VoteService extends cdk.Stack {
         cpu: 256,
         memoryMiB: 512,
         trafficPort: 8080,
-        // image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '../../vote/'), {file: 'Dockerfile'}),
-        image: ecs.ContainerImage.fromRegistry('test')
+        image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '../../vote/'), {file: 'Dockerfile'}),
       }));
 
       voteServiceDesc.add(new extensions.InjecterExtension({
