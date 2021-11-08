@@ -1,5 +1,4 @@
 import * as cdk from '@aws-cdk/core';
-import * as ec2 from "@aws-cdk/aws-ec2";
 import * as ecs from "@aws-cdk/aws-ecs";
 import * as extensions from "@aws-cdk-containers/ecs-service-extensions";
 import * as path from 'path';
@@ -14,7 +13,8 @@ export class ResultsService extends cdk.Stack {
       cpu: 256,
       memoryMiB: 512,
       trafficPort: 8080,
-      image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '../../results/'), {file: 'Dockerfile'}),
+      // image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '../../results/'), {file: 'Dockerfile'}),
+      image: ecs.ContainerImage.fromRegistry('test'),
       environment: {
         COPILOT_SERVICE_DISCOVERY_ENDPOINT: props.serviceDiscoveryName,
       },
