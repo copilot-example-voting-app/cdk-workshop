@@ -1,5 +1,4 @@
 import * as cdk from '@aws-cdk/core';
-import * as ec2 from "@aws-cdk/aws-ec2";
 import * as ecs from "@aws-cdk/aws-ecs";
 import * as extensions from "@aws-cdk-containers/ecs-service-extensions";
 import * as path from 'path';
