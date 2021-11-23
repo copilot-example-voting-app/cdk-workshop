@@ -95,7 +95,7 @@ Run `cdk` to ensure that AWS Cloud Development Kit is preinstalled in this envir
 <details>
   <summary>First hint</summary>
 
-  * Install the AWS CDK command line tool from NPM (note that )
+  * Install the AWS CDK command line tool from NPM (note that the Cloud9 development environment already has CDK installed, but it may not be the latest version)
   * Verify that the CDK command line tool is available
   * Run a CDK Bootstrap command to setup CDK on the AWS account
 </details>
@@ -108,7 +108,7 @@ Run `cdk` to ensure that AWS Cloud Development Kit is preinstalled in this envir
     cdk bootstrap aws://{ACCOUNT}/us-west-2
   ```
 
-  Note that you can get your account ID from the AWS console by clicking the dropdown in the upper right:
+  You can get your account ID from the AWS console by clicking the dropdown in the upper right:
 
   ![images/account-id.png](images/account-id.png)
 </details>
