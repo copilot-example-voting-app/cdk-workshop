@@ -45,6 +45,9 @@ export class DatabaseConnectionInjector extends ContainerMutatingHook {
 
     return {
       ...props,
+      environment: {
+        RDS_ENDPOINT: this.databaseCluster.clusterEndpoint.hostname,
+      },
       secrets: {
         RDS_SECRET: ecs.Secret.fromSecretsManager(this.databaseSecret.secret)
       }
@@ -82,7 +85,9 @@ export class ApiDatabase extends ServiceExtension {
 
     // Create a database
     this.databaseCluster = new rds.ServerlessCluster(scope, 'api-database-cluster', {
-      engine: rds.DatabaseClusterEngine.AURORA_MYSQL,
+      engine: rds.DatabaseClusterEngine.AURORA_POSTGRESQL,
+      defaultDatabaseName: 'api',
+      parameterGroup: rds.ParameterGroup.fromParameterGroupName(scope, 'ParameterGroup', 'default.aurora-postgresql10'),
       vpc: service.environment.vpc,
       credentials: this.databaseSecret
     });
@@ -109,6 +114,6 @@ export class ApiDatabase extends ServiceExtension {
       throw new Error('This service hook is not to be called before the database cluster has been created');
     }
 
-    service.connections.allowTo(this.databaseCluster, ec2.Port.tcp(3306));
+    service.connections.allowTo(this.databaseCluster, ec2.Port.tcp(5432));
   }
 }
