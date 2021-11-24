@@ -1,14 +1,21 @@
 import * as cdk from '@aws-cdk/core';
 import * as ecs from '@aws-cdk/aws-ecs';
+import * as sns from '@aws-cdk/aws-sns';
 import * as extensions from '@aws-cdk-containers/ecs-service-extensions';
 import * as path from 'path';
-import { ProcessorMicroserviceProps } from './shared_props';
 import { CloudWatchLogsExtension } from './awslogs-extension';
 import { ServiceDiscovery } from './service-discovery';
 
+interface ProcessorMicroserviceProps {
+  ecsEnvironment: extensions.Environment,
+  apiService: extensions.Service,
+  serviceDiscoveryName: string,
+  topic: sns.ITopic
+}
+
 export class ProcessorService extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props: ProcessorMicroserviceProps) {
-    super(scope, id, props);
+    super(scope, id);
 
     const processorServiceDesc = new extensions.ServiceDescription();
     processorServiceDesc.add(new extensions.QueueExtension({
@@ -27,10 +34,12 @@ export class ProcessorService extends cdk.Stack {
     processorServiceDesc.add(new CloudWatchLogsExtension());
     processorServiceDesc.add(new ServiceDiscovery());
 
-    const service = new extensions.Service(this, 'processor-service', {
+    const service = new extensions.Service(this, 'processor', {
       environment: props.ecsEnvironment,
       serviceDescription: processorServiceDesc,
     });
+
+    service.connectTo(props.apiService);
 
     const cfnTaskDefinition = service.ecsService.taskDefinition.node.defaultChild as ecs.CfnTaskDefinition;
     const queueExtension = processorServiceDesc.extensions.queue as extensions.QueueExtension;

@@ -9,14 +9,16 @@ import { ApiDatabase } from './api-database';
 import { ServiceDiscovery } from './service-discovery';
 import { HttpLoadBalancer } from './load-balancer';
 
-export interface VotingMicroserviceProps extends cdk.StackProps {
+interface ApiMicroserviceProps {
   ecsEnvironment: extensions.Environment,
   serviceDiscoveryName: string
 }
 
 export class APIService extends cdk.Stack {
-  constructor(scope: cdk.Construct, id: string, props: VotingMicroserviceProps) {
-    super(scope, id, props);
+  public apiService: extensions.Service;
+
+  constructor(scope: cdk.Construct, id: string, props: ApiMicroserviceProps) {
+    super(scope, id);
 
     const apiDesc = new extensions.ServiceDescription();
     apiDesc.add(new extensions.Container({
@@ -26,12 +28,11 @@ export class APIService extends cdk.Stack {
       image: ecs.ContainerImage.fromAsset('services/api', { file: 'Dockerfile' }),
     }));
 
-    apiDesc.add(new HttpLoadBalancer());
     apiDesc.add(new CloudWatchLogsExtension());
     apiDesc.add(new ApiDatabase());
     apiDesc.add(new ServiceDiscovery());
 
-    const resultsService = new extensions.Service(this, 'api-service', {
+    this.apiService = new extensions.Service(this, 'api', {
       environment: props.ecsEnvironment,
       serviceDescription: apiDesc,
     });

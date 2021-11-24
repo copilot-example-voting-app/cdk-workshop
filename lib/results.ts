@@ -2,14 +2,19 @@ import * as cdk from '@aws-cdk/core';
 import * as ecs from "@aws-cdk/aws-ecs";
 import * as extensions from "@aws-cdk-containers/ecs-service-extensions";
 import * as path from 'path';
-import { VotingMicroserviceProps } from './shared_props';
 import { CloudWatchLogsExtension } from './awslogs-extension';
 import { ServiceDiscovery } from './service-discovery';
 import { HttpLoadBalancer } from './load-balancer';
 
+interface ResultsMicroserviceProps {
+  ecsEnvironment: extensions.Environment,
+  apiService: extensions.Service,
+  serviceDiscoveryName: string
+}
+
 export class ResultsService extends cdk.Stack {
-  constructor(scope: cdk.Construct, id: string, props: VotingMicroserviceProps) {
-    super(scope, id, props);
+  constructor(scope: cdk.Construct, id: string, props: ResultsMicroserviceProps) {
+    super(scope, id);
 
     const resultsDescription = new extensions.ServiceDescription();
     resultsDescription.add(new extensions.Container({
@@ -31,10 +36,12 @@ export class ResultsService extends cdk.Stack {
     resultsDescription.add(new CloudWatchLogsExtension());
     resultsDescription.add(new ServiceDiscovery());
 
-    const resultsService = new extensions.Service(this, 'ResultsService', {
+    const resultsService = new extensions.Service(this, 'results', {
       environment: props.ecsEnvironment,
       serviceDescription: resultsDescription,
     });
 
+    // The results service needs to fetch from the API
+    resultsService.connectTo(props.apiService);
   }
 }
