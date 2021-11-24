@@ -3,6 +3,9 @@ import * as ecs from "@aws-cdk/aws-ecs";
 import * as extensions from "@aws-cdk-containers/ecs-service-extensions";
 import * as path from 'path';
 import { VotingMicroserviceProps } from './shared_props';
+import { CloudWatchLogsExtension } from './awslogs-extension';
+import { ServiceDiscovery } from './service-discovery';
+import { HttpLoadBalancer } from './load-balancer';
 
 export class ResultsService extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props: VotingMicroserviceProps) {
@@ -18,7 +21,15 @@ export class ResultsService extends cdk.Stack {
         COPILOT_SERVICE_DISCOVERY_ENDPOINT: props.serviceDiscoveryName,
       },
     }));
-    resultsDescription.add(new extensions.HttpLoadBalancerExtension());
+    resultsDescription.add(new HttpLoadBalancer({
+      healthCheck: {
+        path: '/_healthcheck',
+        interval: cdk.Duration.seconds(5),
+        timeout: cdk.Duration.seconds(2)
+      }
+    }));
+    resultsDescription.add(new CloudWatchLogsExtension());
+    resultsDescription.add(new ServiceDiscovery());
 
     const resultsService = new extensions.Service(this, 'ResultsService', {
       environment: props.ecsEnvironment,

@@ -4,6 +4,8 @@ import * as extensions from '@aws-cdk-containers/ecs-service-extensions';
 import * as path from 'path';
 import * as sns from '@aws-cdk/aws-sns';
 import { VotingMicroserviceProps } from './shared_props';
+import { CloudWatchLogsExtension } from './awslogs-extension';
+import { ServiceDiscovery } from './service-discovery';
 
 export class VoteService extends cdk.Stack {
   public readonly topic: sns.ITopic;
@@ -27,6 +29,8 @@ export class VoteService extends cdk.Stack {
     }));
 
     voteServiceDesc.add(new extensions.HttpLoadBalancerExtension());
+    voteServiceDesc.add(new CloudWatchLogsExtension());
+    voteServiceDesc.add(new ServiceDiscovery());
 
     const service = new extensions.Service(this, 'VoteService', {
       environment: props.ecsEnvironment,
@@ -36,7 +40,7 @@ export class VoteService extends cdk.Stack {
     const cfnTaskDefinition = service.ecsService.taskDefinition.node.defaultChild as ecs.CfnTaskDefinition;
     cfnTaskDefinition.addPropertyOverride('ContainerDefinitions.0.Environment', [{
       Name: 'COPILOT_SNS_TOPIC_ARNS',
-      Value: `{${this.topic.topicName}:${this.topic.topicArn}}`,
+      Value: `{"${this.topic.topicName}": "${this.topic.topicArn}"}`,
     }, {
       Name: 'COPILOT_SERVICE_DISCOVERY_ENDPOINT',
       Value: props.serviceDiscoveryName,

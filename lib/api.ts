@@ -6,6 +6,8 @@ import * as rds from '@aws-cdk/aws-rds';
 import * as path from 'path';
 import { CloudWatchLogsExtension } from './awslogs-extension';
 import { ApiDatabase } from './api-database';
+import { ServiceDiscovery } from './service-discovery';
+import { HttpLoadBalancer } from './load-balancer';
 
 export interface VotingMicroserviceProps extends cdk.StackProps {
   ecsEnvironment: extensions.Environment,
@@ -24,9 +26,10 @@ export class APIService extends cdk.Stack {
       image: ecs.ContainerImage.fromAsset('services/api', { file: 'Dockerfile' }),
     }));
 
-    apiDesc.add(new extensions.HttpLoadBalancerExtension());
+    apiDesc.add(new HttpLoadBalancer());
     apiDesc.add(new CloudWatchLogsExtension());
     apiDesc.add(new ApiDatabase());
+    apiDesc.add(new ServiceDiscovery());
 
     const resultsService = new extensions.Service(this, 'api-service', {
       environment: props.ecsEnvironment,

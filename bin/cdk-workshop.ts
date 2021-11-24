@@ -16,10 +16,12 @@ const sharedMicroservicesProps = {
 };
 
 const apiService = new APIService(app, "APIServiceWorkshop", sharedMicroservicesProps);
-/*const voteService = new VoteService(app, "VoteServiceWorkshop", sharedMicroservicesProps);
+const voteService = new VoteService(app, "VoteServiceWorkshop", sharedMicroservicesProps);
+
 const processorMicroserviceProps = {
-    ...sharedMicroservicesProps,
-    topic: voteService.topic
+  ...sharedMicroservicesProps,
+  apiService: apiService,
+  topic: voteService.topic
 }
 const processorService = new ProcessorService(app, "ProcessorServiceWorkshop", processorMicroserviceProps);
-const resultsServices = new ResultsService(app, "ResultsServiceWorkshop", sharedMicroservicesProps);*/
+const resultsServices = new ResultsService(app, "ResultsServiceWorkshop", sharedMicroservicesProps);
