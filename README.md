@@ -8,7 +8,7 @@ The Pets Voting Application comprises of
 * ["api"](https://github.com/copilot-example-voting-app/api) microservice stores and retrieve results on whether a voter prefers cats or dogs. This is a REST API microservice orchestrated by Amazon ECS on AWS Fargate, and is backed up an Amazon Aurora PostgreSQL database for storage.
 * ["results"](https://github.com/copilot-example-voting-app/results), a frontend service to visualize the results of the votes. This makes a request to the api service to query the votes. Both the results and vote microservices communicate to api through service discovery.
 
-// TODO: Insert architecture diagram
+![images/architecture.png](images/architecture.png)
 
 ## 1. Access your AWS account
 
