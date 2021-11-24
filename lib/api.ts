@@ -2,8 +2,10 @@ import * as cdk from '@aws-cdk/core';
 import * as sns from '@aws-cdk/aws-sns';
 import * as ecs from '@aws-cdk/aws-ecs';
 import * as extensions from "@aws-cdk-containers/ecs-service-extensions";
+import * as rds from '@aws-cdk/aws-rds';
 import * as path from 'path';
 import { CloudWatchLogsExtension } from './awslogs-extension';
+import { ApiDatabase } from './api-database';
 
 export interface VotingMicroserviceProps extends cdk.StackProps {
   ecsEnvironment: extensions.Environment,
@@ -13,8 +15,6 @@ export interface VotingMicroserviceProps extends cdk.StackProps {
 export class APIService extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props: VotingMicroserviceProps) {
     super(scope, id, props);
-
-    // Create a database
 
     const apiDesc = new extensions.ServiceDescription();
     apiDesc.add(new extensions.Container({
@@ -26,8 +26,9 @@ export class APIService extends cdk.Stack {
 
     apiDesc.add(new extensions.HttpLoadBalancerExtension());
     apiDesc.add(new CloudWatchLogsExtension());
+    apiDesc.add(new ApiDatabase());
 
-    const resultsService = new extensions.Service(this, 'ResultsService', {
+    const resultsService = new extensions.Service(this, 'api-service', {
       environment: props.ecsEnvironment,
       serviceDescription: apiDesc,
     });
