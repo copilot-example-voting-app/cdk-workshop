@@ -264,14 +264,107 @@ Let's do that now:
 cdk deploy
 ```
 
-### API Stack
-* Create a new `lib/api.ts` for APIService
-* Checkout api locally. `git clone https://github.com/copilot-example-voting-app/api`
-* Use CDKExtensions to create a new ServiceDescription for `api` microservice
-* Add Aurora storage and inject the right secrets and environment variables to api service
-* npm install
-* cdk synth
-* cdk deploy --all
+You will see a progress bar as each AWS resource is deployed:
+
+![images/cdk-deploy.png](images/cdk-deploy.png)
+
+## Deploy the API Stack
+
+The next step is to deploy a microservice into the ECS environment that we have created.
+
+First let's check out the microservice code:
+
+```sh
+mkdir services
+git clone https://github.com/copilot-example-voting-app/api services/api
+```
+
+Take a look at the code for this service. It is a basic Go service that will serve as the frontend of this workshop application.
+
+Now it is time to deploy this microservice.
+
+Create a new `lib/api.ts` file to define the stack for this application.
+
+Start the file out with a basic skeleton.
+
+```ts
+import * as cdk from '@aws-cdk/core';
+import * as sns from '@aws-cdk/aws-sns';
+import * as ecs from '@aws-cdk/aws-ecs';
+import * as extensions from "@aws-cdk-containers/ecs-service-extensions";
+import * as path from 'path';
+
+export interface VotingMicroserviceProps extends cdk.StackProps {
+    ecsEnvironment: extensions.Environment,
+    serviceDiscoveryName: string
+}
+
+export class APIService extends cdk.Stack {
+    constructor(scope: cdk.Construct, id: string, props: VotingMicroserviceProps) {
+      super(scope, id, props);
+
+    }
+}
+```
+
+This stack is similar to the environment stack but you'll see a new interface. This is used so that we can pass some values from the base environment stack to this API stack.
+
+With the basic skeleton filled out, it is now time to create a `ServiceDescription` for the microservice that we want to deploy:
+
+```ts
+    const apiDesc = new extensions.ServiceDescription();
+    apiDesc.add(new extensions.Container({
+      cpu: 256,
+      memoryMiB: 512,
+      trafficPort: 8080,
+      image: ecs.ContainerImage.fromAsset('services/api', {file: 'Dockerfile'}),
+    }));
+
+    apiDesc.add(new extensions.HttpLoadBalancerExtension());
+
+    const resultsService = new extensions.Service(this, 'ResultsService', {
+      environment: props.ecsEnvironment,
+      serviceDescription: apiDesc,
+    });
+```
+
+Next we need to import this stack in the CDK entry point:
+
+Edit `bin/cdk-workshop.ts` to look like this:
+
+```ts
+#!/usr/bin/env node
+import 'source-map-support/register';
+import * as cdk from '@aws-cdk/core';
+import { VotingEnvironment } from '../lib/environment';
+import { APIService } from '../lib/api';
+
+const app = new cdk.App();
+const votingEnvironment = new VotingEnvironment(app, 'VotingEnvironmentWorkshop', {});
+
+const sharedMicroservicesProps = {
+    ecsEnvironment: votingEnvironment.ecsEnvironment,
+    serviceDiscoveryName: votingEnvironment.serviceDiscoveryName
+};
+
+const apiService = new APIService(app, "APIServiceWorkshop", sharedMicroservicesProps);
+```
+
+Now CDK is creating two different stacks. We can pass values from one stack to the other stack, and CDK will automatically create exports and imports in the underlying CloudFormation to pass values. You can see how this works by running `cdk synth` again.
+
+Now go to `cdk.out` and check the contents of `VotingEnvironmentWorkshop.json`. At the bottom of the JSON you can see that exports were added. If you look at the contents of `APIServiceWorkshop.json` you will see references to import these exports.
+
+Run `cdk diff` to see a preview of the resources to be created. This time you will see a variety of new resources like a load balancer and an ECS service:
+
+![images/cdk-diff-api-service.png](images/cdk-diff-api-service.png)
+
+Last but not least run `cdk deploy --all` to deploy this stack as well as the changes to the base environment stack.
+
+This time when you deploy you will get a prompt asking you to review what is being created. This is because CDK is going to automatically create IAM roles and a security group for the microservice. This gives you a chance to review the permissions and the port configurations to make sure you agree with the security boundaries that CDK is creating:
+
+![images/cdk-deploy-review-api.png](images/cdk-deploy-review-api.png)
+
+Once you agree to the deployment CDK will begin building and pushing the Docker image for the microservice. You don't have to use `docker build` or `docker push` manually. Instead you can let CDK manage the Docker build and push.
 
 ### Vote Stack
 * Create a new `lib/vote.ts` for VoteService
