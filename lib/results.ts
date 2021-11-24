@@ -13,6 +13,8 @@ interface ResultsMicroserviceProps {
 }
 
 export class ResultsService extends cdk.Stack {
+  public resultsService: extensions.Service;
+
   constructor(scope: cdk.Construct, id: string, props: ResultsMicroserviceProps) {
     super(scope, id);
 
@@ -36,12 +38,12 @@ export class ResultsService extends cdk.Stack {
     resultsDescription.add(new CloudWatchLogsExtension());
     resultsDescription.add(new ServiceDiscovery());
 
-    const resultsService = new extensions.Service(this, 'results', {
+    this.resultsService = new extensions.Service(this, 'results', {
       environment: props.ecsEnvironment,
       serviceDescription: resultsDescription,
     });
 
     // The results service needs to fetch from the API
-    resultsService.connectTo(props.apiService);
+    this.resultsService.connectTo(props.apiService);
   }
 }

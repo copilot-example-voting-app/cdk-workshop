@@ -19,7 +19,7 @@ const apiServiceStack = new APIService(app, "APIServiceWorkshop", sharedMicroser
 const voteService = new VoteService(app, "VoteServiceWorkshop", {
   ecsEnvironment: votingEnvironment.ecsEnvironment,
   serviceDiscoveryName: votingEnvironment.serviceDiscoveryName,
-  apiService: apiServiceStack.apiService
+  apiService: apiServiceStack.apiService,
 });
 
 const processorService = new ProcessorService(app, "ProcessorServiceWorkshop", {
@@ -29,7 +29,7 @@ const processorService = new ProcessorService(app, "ProcessorServiceWorkshop", {
   topic: voteService.topic
 });
 
-const resultsServices = new ResultsService(app, "ResultsServiceWorkshop", {
+const resultsServiceStack = new ResultsService(app, "ResultsServiceWorkshop", {
   ecsEnvironment: votingEnvironment.ecsEnvironment,
   serviceDiscoveryName: votingEnvironment.serviceDiscoveryName,
   apiService: apiServiceStack.apiService
