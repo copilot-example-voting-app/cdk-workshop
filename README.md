@@ -18,7 +18,7 @@ Open up the AWS Event Engine portal: [https://dashboard.eventengine.run/](https:
 
 ![images/event-engine-welcome.png](images/event-engine-welcome.png)
 
-You need to enter the hash that you were provided. This will open up the
+You need to enter the hash that you were provided by the event organizers. This will open up the
 Event Engine dashboard:
 
 ![images/event-engine-dashboard.png](images/event-engine-dashboard.png)
