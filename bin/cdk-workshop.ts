@@ -2,10 +2,10 @@
 import 'source-map-support/register';
 import * as cdk from '@aws-cdk/core';
 import { VotingEnvironment } from '../lib/environment';
-import { ResultsService } from "../lib/results";
-import { VoteService } from '../lib/vote';
 import { APIService } from '../lib/api';
+import { VoteService } from '../lib/vote';
 import { ProcessorService } from '../lib/processor';
+import { ResultsService } from "../lib/results";
 
 const app = new cdk.App();
 const votingEnvironment = new VotingEnvironment(app, 'VotingEnvironmentWorkshop', {});

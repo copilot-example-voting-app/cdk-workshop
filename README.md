@@ -279,9 +279,9 @@ const votingEnvironment = new VotingEnvironment(app, 'VotingEnvironmentWorkshop'
 ```
 </details>
 <details>
-  <summary>Give me the answer<summary>
+  <summary>Give me the answer</summary>
 
-  For the prefab answer we are going to initialize a Git repo in the project and then just checkout a remote project branch that is complete up to this step. Run the following commands:
+  For the prefab answer we are going to initialize a Git repo in the project and then just checkout a remote project branch that is complete up to this step. Run the following commands inside of your `cdk-workshop` folder:
 
   ```
   git init
@@ -361,69 +361,50 @@ Now it is time to deploy this microservice.
 <details>
   <summary>Show me how to do it</summary>
 
+  Create the following file at `lib/api.ts`
 
-</details>
-<details>
-  <summary>Give me the answer<summary>
-
-  Check out the prefab code for this step:
-
-  ```
-  git checkout answer/step-two
-  ```
-</details>
-
-
-Create a new `lib/api.ts` file to define the stack for this application.
-
-Start the file out with a basic skeleton.
-
-```ts
+  ```ts
 import * as cdk from '@aws-cdk/core';
-import * as sns from '@aws-cdk/aws-sns';
 import * as ecs from '@aws-cdk/aws-ecs';
 import * as extensions from "@aws-cdk-containers/ecs-service-extensions";
-import * as path from 'path';
+import { CloudWatchLogsExtension } from './awslogs-extension';
+import { ApiDatabase } from './api-database';
+import { ServiceDiscovery } from './service-discovery';
 
-export interface VotingMicroserviceProps extends cdk.StackProps {
-    ecsEnvironment: extensions.Environment,
-    serviceDiscoveryName: string
+interface ApiMicroserviceProps {
+  ecsEnvironment: extensions.Environment,
+  serviceDiscoveryName: string
 }
 
 export class APIService extends cdk.Stack {
-    constructor(scope: cdk.Construct, id: string, props: VotingMicroserviceProps) {
-      super(scope, id, props);
+  public apiService: extensions.Service;
 
-    }
-}
-```
+  constructor(scope: cdk.Construct, id: string, props: ApiMicroserviceProps) {
+    super(scope, id);
 
-This stack is similar to the environment stack but you'll see a new interface. This is used so that we can pass some values from the base environment stack to this API stack.
-
-With the basic skeleton filled out, it is now time to create a `ServiceDescription` for the microservice that we want to deploy:
-
-```ts
     const apiDesc = new extensions.ServiceDescription();
     apiDesc.add(new extensions.Container({
       cpu: 256,
       memoryMiB: 512,
       trafficPort: 8080,
-      image: ecs.ContainerImage.fromAsset('services/api', {file: 'Dockerfile'}),
+      image: ecs.ContainerImage.fromAsset('services/api', { file: 'Dockerfile' }),
     }));
 
-    apiDesc.add(new extensions.HttpLoadBalancerExtension());
+    apiDesc.add(new CloudWatchLogsExtension());
+    apiDesc.add(new ApiDatabase());
+    apiDesc.add(new ServiceDiscovery());
 
-    const resultsService = new extensions.Service(this, 'ResultsService', {
+    this.apiService = new extensions.Service(this, 'api', {
       environment: props.ecsEnvironment,
       serviceDescription: apiDesc,
     });
-```
+  }
+}
+  ```
 
-Next we need to import this stack in the CDK entry point:
+  Modify `bin/cdk-workshop.ts` to look like this:
 
-Edit `bin/cdk-workshop.ts` to look like this:
-
-```ts
+  ```ts
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from '@aws-cdk/core';
@@ -433,52 +414,460 @@ import { APIService } from '../lib/api';
 const app = new cdk.App();
 const votingEnvironment = new VotingEnvironment(app, 'VotingEnvironmentWorkshop', {});
 
-const sharedMicroservicesProps = {
-    ecsEnvironment: votingEnvironment.ecsEnvironment,
-    serviceDiscoveryName: votingEnvironment.serviceDiscoveryName
-};
+const apiServiceStack = new APIService(app, "APIServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  serviceDiscoveryName: votingEnvironment.serviceDiscoveryName
+});
+  ```
+</details>
+<details>
+  <summary>Give me the answer</summary>
 
-const apiService = new APIService(app, "APIServiceWorkshop", sharedMicroservicesProps);
-```
+  Check out the prefab code for this step:
 
-Now CDK is creating two different stacks. We can pass values from one stack to the other stack, and CDK will automatically create exports and imports in the underlying CloudFormation to pass values. You can see how this works by running `cdk synth` again.
+  ```
+  git checkout answer/step-two
+  ```
+</details>
+
+Now CDK has two different top level stacks defined in `bin/cdk-workshop.ts`. You will see that we can pass values from one stack to the other stack, and CDK will automatically create exports and imports in the underlying CloudFormation to pass values. You can see how this works by running `cdk synth` again.
 
 Now go to `cdk.out` and check the contents of `VotingEnvironmentWorkshop.json`. At the bottom of the JSON you can see that exports were added. If you look at the contents of `APIServiceWorkshop.json` you will see references to import these exports.
 
-Run `cdk diff` to see a preview of the resources to be created. This time you will see a variety of new resources like a load balancer and an ECS service:
+Run `cdk diff` to see a preview of the resources to be created. This time you will see a variety of new resources like a load balancer, a database, and an ECS service:
 
 ![images/cdk-diff-api-service.png](images/cdk-diff-api-service.png)
 
-Last but not least run `cdk deploy --all` to deploy this stack as well as the changes to the base environment stack.
+Last but not least we need to deploy this stack as well as the changes to the base environment stack to add the export.
+
+Run:
+
+```sh
+cdk deploy -all
+```
 
 This time when you deploy you will get a prompt asking you to review what is being created. This is because CDK is going to automatically create IAM roles and a security group for the microservice. This gives you a chance to review the permissions and the port configurations to make sure you agree with the security boundaries that CDK is creating:
 
 ![images/cdk-deploy-review-api.png](images/cdk-deploy-review-api.png)
 
-Once you agree to the deployment CDK will begin building and pushing the Docker image for the microservice. You don't have to use `docker build` or `docker push` manually. Instead you can let CDK manage the Docker build and push.
+Reading through the IAM statement changes you can see that CDK is granting the API microservice permission to read a database password secret, and it is granting the API service permission to communicate to the Postgres database on the standard port 5432.
 
-### Vote Stack
-* Create a new `lib/vote.ts` for VoteService
-* Checkout vote locally. `git clone https://github.com/copilot-example-voting-app/vote`
-* Use CDKExtensions to create a new ServiceDescription for `vote` microservice
-* Add SNS Topic and make an accessor for it to be used in `processor` service
-* npm install
-* cdk synth
-* cdk deploy --all
+Once you agree to the deployment by entering `y`, then CDK will begin building and pushing the Docker image for the microservice. You don't have to use `docker build` or `docker push` manually. Instead you can let CDK manage the Docker build and push.
 
-### Processor Stack
-* Create a new `lib/processor.ts` for VoteService
-* Checkout processor locally. `git clone https://github.com/copilot-example-voting-app/processor`
-* Use CDKExtensions to create a new Queue based ServiceDescription for `processor` microservice
-* Use the sns topic from vote as input
-* npm install
-* cdk synth
-* cdk deploy --all
+Last but not least you will once again see a progress bar while CDK creates resources like the database cluster and the API service as a Fargate task.
 
-### Results Stack
-* Create a new `lib/results.ts` for ResultsService
-* Checkout results locally. `git clone https://github.com/copilot-example-voting-app/results`
-* Use CDKExtensions to create a new ServiceDescription for `results` microservice and attached a Load Balancer Extension
-* npm install
-* cdk synth
-* cdk deploy --all
+&nbsp;
+
+&nbsp;
+
+
+### Vote Microservice
+
+Now that the API is deployed it is time to deploy the voting service. This service will be a front facing service that people use to vote. Votes from the service will go to an SNS topic. So we need to create a new stack that deploys the voting service and its topic.
+
+First let's check out the prebuilt microservice code:
+
+```sh
+git clone https://github.com/copilot-example-voting-app/vote services/vote
+```
+
+<details>
+  <summary>Give me a challenge</summary>
+
+  * Create a new CDK stack in `lib` and add it to your entrypoint in `bin`.
+  * In the stack create the following CDK resources:
+    - A [`ServiceDescription`](https://github.com/aws/aws-cdk/blob/master/packages/%40aws-cdk-containers/ecs-service-extensions/lib/service-description.ts#L9) from the [`@aws-cdk-containers/ecs-service-extensions`](https://www.npmjs.com/package/@aws-cdk-containers/ecs-service-extensions) package
+    - Add a `Container` to the service extension, which is built from the code in the `services/vote` folder.
+    - Import and `ServiceDescription.add()` the following prebuilt extensions that you copied in the last step to the service description: CloudWatch Logs, Service Discovery
+    - Create an SNS topic and inject it into the `ServiceDescription` using the `InjectorExtension` so that the service can use it.
+    - Use the `Service` construct to launch the `ServiceDescription` that you created, inside of the `Environment` that you created in the previous step.
+</details>
+<details>
+  <summary>Show me how to do it</summary>
+
+  Create the following file at `lib/vote.ts`
+
+  ```ts
+import * as cdk from '@aws-cdk/core';
+import * as ecs from '@aws-cdk/aws-ecs';
+import * as extensions from '@aws-cdk-containers/ecs-service-extensions';
+import * as path from 'path';
+import * as sns from '@aws-cdk/aws-sns';
+import { CloudWatchLogsExtension } from './awslogs-extension';
+import { ServiceDiscovery } from './service-discovery';
+
+interface VotingMicroserviceProps {
+  ecsEnvironment: extensions.Environment,
+  apiService: extensions.Service,
+  serviceDiscoveryName: string
+}
+
+export class VoteService extends cdk.Stack {
+  public readonly topic: sns.ITopic;
+
+  constructor(scope: cdk.Construct, id: string, props: VotingMicroserviceProps) {
+    super(scope, id);
+
+    this.topic = new sns.Topic(this, 'WorkshopTopic');
+    const voteServiceDesc = new extensions.ServiceDescription();
+    voteServiceDesc.add(new extensions.Container({
+      cpu: 256,
+      memoryMiB: 512,
+      trafficPort: 8080,
+      image: ecs.ContainerImage.fromAsset('./services/vote/', { file: 'Dockerfile' }),
+    }));
+
+    voteServiceDesc.add(new extensions.InjecterExtension({
+      injectables: [new extensions.InjectableTopic({
+        topic: this.topic,
+      })],
+    }));
+
+    voteServiceDesc.add(new extensions.HttpLoadBalancerExtension());
+    voteServiceDesc.add(new CloudWatchLogsExtension());
+    voteServiceDesc.add(new ServiceDiscovery());
+
+    const service = new extensions.Service(this, 'vote', {
+      environment: props.ecsEnvironment,
+      serviceDescription: voteServiceDesc,
+    });
+
+    service.connectTo(props.apiService);
+
+    const cfnTaskDefinition = service.ecsService.taskDefinition.node.defaultChild as ecs.CfnTaskDefinition;
+    cfnTaskDefinition.addPropertyOverride('ContainerDefinitions.0.Environment', [{
+      Name: 'COPILOT_SNS_TOPIC_ARNS',
+      Value: `{"events": "${this.topic.topicArn}"}`,
+    }, {
+      Name: 'COPILOT_SERVICE_DISCOVERY_ENDPOINT',
+      Value: props.serviceDiscoveryName,
+    }]);
+  }
+}
+  ```
+
+  Modify `bin/cdk-workshop.ts` to look like this:
+
+  ```ts
+#!/usr/bin/env node
+import 'source-map-support/register';
+import * as cdk from '@aws-cdk/core';
+import { VotingEnvironment } from '../lib/environment';
+import { APIService } from '../lib/api';
+import { VoteService } from '../lib/vote';
+
+const app = new cdk.App();
+const votingEnvironment = new VotingEnvironment(app, 'VotingEnvironmentWorkshop', {});
+
+const apiServiceStack = new APIService(app, "APIServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  serviceDiscoveryName: votingEnvironment.serviceDiscoveryName
+});
+
+const voteService = new VoteService(app, "VoteServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  serviceDiscoveryName: votingEnvironment.serviceDiscoveryName,
+  apiService: apiServiceStack.apiService,
+});
+  ```
+</details>
+<details>
+  <summary>Give me the answer</summary>
+
+  Check out the prefab code for this step:
+
+  ```
+  git checkout answer/step-three
+  ```
+</details>
+
+Now make sure that your code is working by running `cdk diff` again.
+
+Run `cdk deploy --all --require-approval never` to deploy the entire application, including this new voting microservice.
+
+This time when CDK is done deploying you will see a URL output:
+
+![images/cdk-deploy-output.png](images/cdk-deploy-output.png)
+
+ This is the URL at which the voting service can be reached. You can load this up in your browser:
+
+ ![images/vote-app.png](images/vote-app.png)
+
+ Feel free to click the vote buttons to vote for cats or dogs. However, your votes are currently not being stored because the votes are being published to the SNS topic, and there is nothing on the other end to accept those votes and process them. We will solve that next.
+
+&nbsp;
+
+&nbsp;
+
+### Vote Processor Microservice
+
+The next microservice we are going to deploy is a backend worker that pulls votes off a queue, processes them in batches, and persists them using the API. The queue will be subscribed to that topic we created for the vote microserivce. This architecture is deliberately a bit more complex than it needs to be, but this serves as a good example of how you might create decouple backend workers in your own microservice architecture.
+
+First let's check out the prebuilt microservice code:
+
+```sh
+git clone https://github.com/copilot-example-voting-app/processor services/processor
+```
+
+<details>
+  <summary>Give me a challenge</summary>
+
+  - Create your new stack and `ServiceDescription` to deploy the `processor` code.
+  - This time add a `QueueExtension` so that the service
+    has a queue, and subscribe the queue to the topic that you created in the last step.
+  - Make sure that the processor service has the service discovery extension and use `Service.connectTo(Service)` to connect the processor service to the API service, so that they can communicate to each other.
+</details>
+<details>
+  <summary>Show me how to do it</summary>
+
+  Create the following file at `lib/processor.ts`
+
+  ```ts
+import * as cdk from '@aws-cdk/core';
+import * as ecs from '@aws-cdk/aws-ecs';
+import * as sns from '@aws-cdk/aws-sns';
+import * as extensions from '@aws-cdk-containers/ecs-service-extensions';
+import * as path from 'path';
+import { CloudWatchLogsExtension } from './awslogs-extension';
+import { ServiceDiscovery } from './service-discovery';
+
+interface ProcessorMicroserviceProps {
+  ecsEnvironment: extensions.Environment,
+  apiService: extensions.Service,
+  serviceDiscoveryName: string,
+  topic: sns.ITopic
+}
+
+export class ProcessorService extends cdk.Stack {
+  constructor(scope: cdk.Construct, id: string, props: ProcessorMicroserviceProps) {
+    super(scope, id);
+
+    const processorServiceDesc = new extensions.ServiceDescription();
+    processorServiceDesc.add(new extensions.QueueExtension({
+      subscriptions: [new extensions.TopicSubscription({
+        topic: props.topic,
+      })],
+    }));
+
+    processorServiceDesc.add(new extensions.Container({
+      cpu: 1024,
+      memoryMiB: 2048,
+      trafficPort: 80,
+      image: ecs.ContainerImage.fromAsset('./services/processor/', { file: 'Dockerfile' }),
+    }));
+
+    processorServiceDesc.add(new CloudWatchLogsExtension());
+    processorServiceDesc.add(new ServiceDiscovery());
+
+    const service = new extensions.Service(this, 'processor', {
+      environment: props.ecsEnvironment,
+      serviceDescription: processorServiceDesc,
+    });
+
+    service.connectTo(props.apiService);
+
+    const cfnTaskDefinition = service.ecsService.taskDefinition.node.defaultChild as ecs.CfnTaskDefinition;
+    const queueExtension = processorServiceDesc.extensions.queue as extensions.QueueExtension;
+    cfnTaskDefinition.addPropertyOverride('ContainerDefinitions.0.Environment', [{
+      Name: 'COPILOT_QUEUE_URI',
+      Value: queueExtension.eventsQueue.queueUrl,
+    }, {
+      Name: 'COPILOT_SERVICE_DISCOVERY_ENDPOINT',
+      Value: props.serviceDiscoveryName,
+    }]);
+  }
+}
+  ```
+
+  Modify `bin/cdk-workshop.ts` to look like this:
+
+  ```ts
+#!/usr/bin/env node
+import 'source-map-support/register';
+import * as cdk from '@aws-cdk/core';
+import { VotingEnvironment } from '../lib/environment';
+import { APIService } from '../lib/api';
+import { VoteService } from '../lib/vote';
+import { ProcessorService } from '../lib/processor';
+
+const app = new cdk.App();
+const votingEnvironment = new VotingEnvironment(app, 'VotingEnvironmentWorkshop', {});
+
+const apiServiceStack = new APIService(app, "APIServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  serviceDiscoveryName: votingEnvironment.serviceDiscoveryName
+});
+
+const voteService = new VoteService(app, "VoteServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  serviceDiscoveryName: votingEnvironment.serviceDiscoveryName,
+  apiService: apiServiceStack.apiService,
+});
+
+const processorService = new ProcessorService(app, "ProcessorServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  serviceDiscoveryName: votingEnvironment.serviceDiscoveryName,
+  apiService: apiServiceStack.apiService,
+  topic: voteService.topic
+});
+  ```
+</details>
+<details>
+  <summary>Give me the answer</summary>
+
+  Check out the prefab code for this step:
+
+  ```
+  git checkout answer/step-four
+  ```
+</details>
+
+Run `cdk diff` again to see a preview of changes.
+
+This time you will see a security group change that is allowing the API service to accept inbound traffic from the processor service. This allows the processor service to persist votes into the API.
+
+![images/cdk-deploy-review-processor.png](images/cdk-deploy-review-processor.png)
+
+Run `cdk deploy --all --require-approval never` to deploy the changes.
+
+&nbsp;
+
+&nbsp;
+
+### Results Microservice
+
+The microservice stack is coming together: we have a frontend for voting, a processor service for gathering up votes, and an API for persisting the votes. The final step is to deploy a results service that can show the poll and decide a winner.
+
+First let's check out the prebuilt microservice code:
+
+```sh
+git clone https://github.com/copilot-example-voting-app/results services/results
+```
+
+<details>
+  <summary>Give me a challenge</summary>
+
+  You probably have a general idea of what to do by now.
+
+  - The results service needs to `Service.connectTo(Service)` to the API service
+  - The results service needs a load balancer extension in order to be accessible from the public. Use the custom load balancer extension that you copied from the `sample-workshop`.
+</details>
+<details>
+  <summary>Show me how to do it</summary>
+
+  Create the following file at `lib/results.ts`
+
+  ```ts
+import * as cdk from '@aws-cdk/core';
+import * as ecs from "@aws-cdk/aws-ecs";
+import * as extensions from "@aws-cdk-containers/ecs-service-extensions";
+import { CloudWatchLogsExtension } from './awslogs-extension';
+import { ServiceDiscovery } from './service-discovery';
+import { HttpLoadBalancer } from './load-balancer';
+
+interface ResultsMicroserviceProps {
+  ecsEnvironment: extensions.Environment,
+  apiService: extensions.Service,
+  serviceDiscoveryName: string
+}
+
+export class ResultsService extends cdk.Stack {
+  public resultsService: extensions.Service;
+
+  constructor(scope: cdk.Construct, id: string, props: ResultsMicroserviceProps) {
+    super(scope, id);
+
+    const resultsDescription = new extensions.ServiceDescription();
+    resultsDescription.add(new extensions.Container({
+      cpu: 256,
+      memoryMiB: 512,
+      trafficPort: 8080,
+      image: ecs.ContainerImage.fromAsset('./services/results/', { file: 'Dockerfile' }),
+      environment: {
+        COPILOT_SERVICE_DISCOVERY_ENDPOINT: props.serviceDiscoveryName,
+      },
+    }));
+    resultsDescription.add(new HttpLoadBalancer({
+      healthCheck: {
+        path: '/_healthcheck',
+        interval: cdk.Duration.seconds(5),
+        timeout: cdk.Duration.seconds(2)
+      }
+    }));
+    resultsDescription.add(new CloudWatchLogsExtension());
+    resultsDescription.add(new ServiceDiscovery());
+
+    this.resultsService = new extensions.Service(this, 'results', {
+      environment: props.ecsEnvironment,
+      serviceDescription: resultsDescription,
+    });
+
+    // The results service needs to fetch from the API
+    this.resultsService.connectTo(props.apiService);
+  }
+}
+  ```
+
+  Modify `bin/cdk-workshop.ts` to look like this:
+
+  ```ts
+#!/usr/bin/env node
+import 'source-map-support/register';
+import * as cdk from '@aws-cdk/core';
+import { VotingEnvironment } from '../lib/environment';
+import { APIService } from '../lib/api';
+import { VoteService } from '../lib/vote';
+import { ProcessorService } from '../lib/processor';
+import { ResultsService } from "../lib/results";
+
+const app = new cdk.App();
+const votingEnvironment = new VotingEnvironment(app, 'VotingEnvironmentWorkshop', {});
+
+const apiServiceStack = new APIService(app, "APIServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  serviceDiscoveryName: votingEnvironment.serviceDiscoveryName
+});
+
+const voteService = new VoteService(app, "VoteServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  serviceDiscoveryName: votingEnvironment.serviceDiscoveryName,
+  apiService: apiServiceStack.apiService,
+});
+
+const processorService = new ProcessorService(app, "ProcessorServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  serviceDiscoveryName: votingEnvironment.serviceDiscoveryName,
+  apiService: apiServiceStack.apiService,
+  topic: voteService.topic
+});
+
+const resultsServiceStack = new ResultsService(app, "ResultsServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  serviceDiscoveryName: votingEnvironment.serviceDiscoveryName,
+  apiService: apiServiceStack.apiService
+});
+  ```
+</details>
+<details>
+  <summary>Give me the answer</summary>
+
+  Check out the prefab code for this step:
+
+  ```
+  git checkout answer/step-five
+  ```
+</details>
+
+Now it is once again time to `cdk diff` and `cdk deploy --all --require-approval never`.
+
+Once the results service deploys you will once more be given a URL for the results service. Copy that URL and add `/results` on the end to view the results of the vote:
+
+![images/vote-app.png](images/results-app.png)
+
+You can now submit votes using the vote service, and refresh the results service to see the vote winner.
+
+&nbsp;
+
+&nbsp;
+
+### Next steps

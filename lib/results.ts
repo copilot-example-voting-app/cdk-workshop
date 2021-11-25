@@ -1,7 +1,6 @@
 import * as cdk from '@aws-cdk/core';
 import * as ecs from "@aws-cdk/aws-ecs";
 import * as extensions from "@aws-cdk-containers/ecs-service-extensions";
-import * as path from 'path';
 import { CloudWatchLogsExtension } from './awslogs-extension';
 import { ServiceDiscovery } from './service-discovery';
 import { HttpLoadBalancer } from './load-balancer';
