@@ -18,21 +18,28 @@ Open up the AWS Event Engine portal: [https://dashboard.eventengine.run/](https:
 
 ![images/event-engine-welcome.png](images/event-engine-welcome.png)
 
-You need to enter the hash that you were provided by the event organizers. This will open up the
-Event Engine dashboard:
+You need to enter the hash that you were provided by the event organizers. This will open up the Event Engine dashboard. Then open the AWS Console.
 
-![images/event-engine-dashboard.png](images/event-engine-dashboard.png)
+<details>
+  <summary>Show me how to do it</summary>
 
-Click on the "AWS Console" button.
+  ![images/event-engine-dashboard.png](images/event-engine-dashboard.png)
 
-![images/event-engine-open-console.png](images/event-engine-dashboard.png)
+  Click on the "AWS Console" button.
 
-Then click on "Open AWS Console".
+  ![images/event-engine-open-console.png](images/event-engine-open-console.png)
 
-You will be logged in to the AWS Console of a temporary AWS account that you
-can use for the duration of this workshop:
+  Then click on "Open AWS Console".
 
-![images/aws-console.png](images/aws-console.png)
+  You will be logged in to the AWS Console of a temporary AWS account that you can use for the duration of this workshop:
+
+  ![images/aws-console.png](images/aws-console.png)
+</details>
+
+
+
+
+
 
 ## 2. Load up the cloud development environment
 
