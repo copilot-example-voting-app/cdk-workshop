@@ -136,9 +136,9 @@ Run `cdk` to ensure that AWS Cloud Development Kit is preinstalled in this envir
 
 As you go through the workshop you will see three levels to each step:
 
-* __"Give me a challenge"__ may be fun for you if you are already a very advanced user of AWS CDK and familiar with TypeScript. The challenge will give you the high level goals of this step and links to the docs. You can try to write the code to solve the challenge by yourself if you wish.
-* __"Show me how to do it"__ will give you code that you can copy and paste to solve this step. If you aren't familiar with AWS CDK or TypeScript this will be the best option for learning what CDK does and how it works without needing a lot of preexisting knowledge.
-* __"Give me the answer"__ is ideal if you are in a hurry or not feeling like doing some coding or typing today. It will give you a prefab project branch to check out and you just have to run the commands to deploy the code quickly and easily. You will learn how to use CDK to deploy applications, but will probably not learn as much about how CDK works under the hood.
+* __"Give me a challenge"__ may be fun for you if you are already a very advanced user of AWS CDK and familiar with TypeScript. The challenge will give you the high level goals of this step and links to the relevant docs. You can try to write the code to solve the challenge by yourself if you wish.
+* __"Show me how to do it"__ will give you code that you can copy and paste to solve this step. If you aren't familiar with AWS CDK or TypeScript this will be the best option for learning what CDK does and how it works without needing a lot of preexisting knowledge. If you want to learn more about what you are copying and pasting then open up the "Give me a challenge" section and see if you can match up the challenge objectives with the code you are seeing.
+* __"Give me the answer"__ is ideal if you are in a hurry or not feeling like doing some coding or typing today. This is the fastest path through the workshop because it just gives you a prefab project branch to check out and you only have to run the commands to deploy the code quickly and easily. You will learn how to use CDK to deploy applications, but will probably not learn as much about how CDK works under the hood.
 
 The first step is to clone this workshop repo. This clone will serve as a working reference. Run the following command in your Cloud9 terminal:
 
@@ -195,15 +195,15 @@ Let's create a first stack in your CDK project. This is going to be a base stack
     - `"@aws-cdk/aws-rds": "1.130.0",`
     - `"@aws-cdk/core": "1.130.0",`
   * Copy in some prebuilt extensions from the `sample-workshop` that we will use later on:
-    - `lib/api-database.ts`
-    - `lib/awslogs-extension.ts`
-    - `lib/load-balancer.ts`
-    - `lib/service-discovery.ts`
+    - `lib/api-database.ts` - Creates an Aurora Serverless database that the API microservice will use
+    - `lib/awslogs-extension.ts` - Configures a microservice to capture logs to CloudWatch Logs
+    - `lib/load-balancer.ts` - Adds a public facing load balancer to a microservice so that Internet traffic can reach it.
+    - `lib/service-discovery.ts` - Adds DNS based service discovery to a microservice, and aids in configuring security groups between two microservices.
   * Create a new CDK stack in `lib` and add it to your entrypoint in `bin`.
   * In the stack create the following CDK resources:
-    - AWS VPC
-    - ECS Cluster that uses that VPC
-    - Add the following service discovery namespace to the ECS Cluster: `voting-app.local`
+    - [AWS VPC](https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ec2.Vpc.html)
+    - [ECS Cluster that uses that VPC](https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ecs.Cluster.html)
+    - Add the following service discovery namespace to the ECS Cluster: `voting-app.local`. [Hint](https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-ecs.Cluster.html#addwbrdefaultwbrcloudwbrmapwbrnamespaceoptions)
 </details>
 <details>
   <summary>Show me how to do it</summary>
@@ -225,10 +225,10 @@ Make sure you run `npm install` to install the dependencies.
 
 Now copy the following files from the `sample-workshop/lib` into `cdk-workshop/lib`. These are CDK extensions that we will use later on in our microservice stacks:
 
-- `lib/api-database.ts`
-- `lib/awslogs-extension.ts`
-- `lib/load-balancer.ts`
-- `lib/service-discovery.ts`
+- `lib/api-database.ts` - Creates an Aurora Serverless database that the API microservice will use
+- `lib/awslogs-extension.ts` - Configures a microservice to capture logs to CloudWatch Logs
+- `lib/load-balancer.ts` - Adds a public facing load balancer to a microservice so that Internet traffic can reach it.
+- `lib/service-discovery.ts` - Adds DNS based service discovery to a microservice, and aids in configuring security groups between two microservices.
 
 Create the following file: `cdk-workshop/lib/environment.ts`
 ```ts
@@ -354,9 +354,10 @@ Now it is time to deploy this microservice.
   * Create a new CDK stack in `lib` and add it to your entrypoint in `bin`.
   * In the stack create the following CDK resources:
     - A [`ServiceDescription`](https://github.com/aws/aws-cdk/blob/master/packages/%40aws-cdk-containers/ecs-service-extensions/lib/service-description.ts#L9) from the [`@aws-cdk-containers/ecs-service-extensions`](https://www.npmjs.com/package/@aws-cdk-containers/ecs-service-extensions) package
-    - Add a `Container` to the service extension, which is built from the code in the `services/api` folder. Refer to the package docs on NPM for example of how to do this.
+    - Add a `Container` to the service extension, which is built from the code in the `services/api` folder. Refer to the package docs on NPM for an example of how to do this.
     - Import and `ServiceDescription.add()` the following prebuilt extensions that you copied in the last step to the service description: CloudWatch Logs, API Database, and Service Discovery
     - Use the `Service` construct to launch the `ServiceDescription` that you created, inside of the `Environment` that you created in the previous step.
+    - Hint: You will want to expose the API's `Service` construct as a public property on the stack, so that you can reference it in future stacks of microservices that need to connect to this microservice.
 </details>
 <details>
   <summary>Show me how to do it</summary>
@@ -481,6 +482,9 @@ git clone https://github.com/copilot-example-voting-app/vote services/vote
     - Import and `ServiceDescription.add()` the following prebuilt extensions that you copied in the last step to the service description: CloudWatch Logs, Service Discovery
     - Create an SNS topic and inject it into the `ServiceDescription` using the `InjectorExtension` so that the service can use it.
     - Use the `Service` construct to launch the `ServiceDescription` that you created, inside of the `Environment` that you created in the previous step.
+    - This service expects the following two environment variables:
+      - `COPILOT_SNS_TOPIC_ARNS` which has an input format like: `{"events":"INSERT SNS TOPIC ARN HERE"}`
+      - `COPILOT_SERVICE_DISCOVERY_ENDPOINT` which should be set to the service discovery namespace `voting-app.local` which you created in the first step
 </details>
 <details>
   <summary>Show me how to do it</summary>
@@ -616,8 +620,11 @@ git clone https://github.com/copilot-example-voting-app/processor services/proce
 
   - Create your new stack and `ServiceDescription` to deploy the `processor` code.
   - This time add a `QueueExtension` so that the service
-    has a queue, and subscribe the queue to the topic that you created in the last step.
+    has a queue, and subscribe the SQS queue to the SNS topic that you created in the last step.
   - Make sure that the processor service has the service discovery extension and use `Service.connectTo(Service)` to connect the processor service to the API service, so that they can communicate to each other.
+  - This service expects the following environment variables:
+    - `COPILOT_QUEUE_URI` which is the URL of the SQS queue that gets the vote events
+    - `COPILOT_SERVICE_DISCOVERY_ENDPOINT` which should be set to the service discovery namespace `voting-app.local` which you created in the first step
 </details>
 <details>
   <summary>Show me how to do it</summary>
@@ -753,6 +760,8 @@ git clone https://github.com/copilot-example-voting-app/results services/results
 
   - The results service needs to `Service.connectTo(Service)` to the API service
   - The results service needs a load balancer extension in order to be accessible from the public. Use the custom load balancer extension that you copied from the `sample-workshop`.
+  - The results service requires the environment variable:
+    - `COPILOT_SERVICE_DISCOVERY_ENDPOINT` which should be set to the service discovery namespace `voting-app.local` which you created in the first step
 </details>
 <details>
   <summary>Show me how to do it</summary>
