@@ -912,7 +912,7 @@ Run `cdk deploy --all --require-approval never` once again.
 
 Once the CDK deployment is done try using the vote and results services again. This time when you refresh the results page you will see any votes that you sent reflected almost instantly!
 
-![images/vote-and-results.png](images/vote-and-results.png)c
+![images/vote-and-results.png](images/vote-and-results.png)
 
 
 &nbsp;
@@ -1073,6 +1073,15 @@ Inside of `services/vote/templates/index.html`:
 ```
 
 Now the microservice deployment is feeling more like a single coherent website!
+</details>
+<details>
+  <summary>Give me the answer</summary>
+
+  Check out the prefab code for this step:
+
+  ```
+  git checkout answer/step-nginx
+  ```
 </details>
 
 &nbsp;
