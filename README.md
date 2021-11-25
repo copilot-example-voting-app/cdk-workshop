@@ -1081,6 +1081,7 @@ Now the microservice deployment is feeling more like a single coherent website!
 
   ```
   git checkout answer/step-nginx
+  cdk deploy --all --require-approval never
   ```
 </details>
 
