@@ -927,6 +927,12 @@ These are open ended tasks that you might consider trying out if you feel like l
 
 ### See how many lines of infrastructure as code were saved by using AWS CDK
 
+Regenerate the CloudFormation templates for the project in their most minimalistic format, with all metadata stripped out:
+
+```
+cdk --version-reporting false --asset-metadata false --path-metadata false synth
+```
+
 Look into the `cdk.out` folder to see the files marked `*.template.json`. These are the raw CloudFormation templates, in JSON format, which are passed off the underlying AWS API to create resources on your behalf.
 
 Sum up the lines of JSON:
