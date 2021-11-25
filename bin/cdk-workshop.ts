@@ -9,12 +9,11 @@ import { ProcessorService } from '../lib/processor';
 
 const app = new cdk.App();
 const votingEnvironment = new VotingEnvironment(app, 'VotingEnvironmentWorkshop', {});
-const sharedMicroservicesProps = {
+
+const apiServiceStack = new APIService(app, "APIServiceWorkshop", {
   ecsEnvironment: votingEnvironment.ecsEnvironment,
   serviceDiscoveryName: votingEnvironment.serviceDiscoveryName
-};
-
-const apiServiceStack = new APIService(app, "APIServiceWorkshop", sharedMicroservicesProps);
+});
 
 const voteService = new VoteService(app, "VoteServiceWorkshop", {
   ecsEnvironment: votingEnvironment.ecsEnvironment,

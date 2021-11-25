@@ -1,13 +1,9 @@
 import * as cdk from '@aws-cdk/core';
-import * as sns from '@aws-cdk/aws-sns';
 import * as ecs from '@aws-cdk/aws-ecs';
 import * as extensions from "@aws-cdk-containers/ecs-service-extensions";
-import * as rds from '@aws-cdk/aws-rds';
-import * as path from 'path';
 import { CloudWatchLogsExtension } from './awslogs-extension';
 import { ApiDatabase } from './api-database';
 import { ServiceDiscovery } from './service-discovery';
-import { HttpLoadBalancer } from './load-balancer';
 
 interface ApiMicroserviceProps {
   ecsEnvironment: extensions.Environment,
