@@ -78,4 +78,8 @@ export class HttpLoadBalancer extends ServiceExtension {
       targets: [service],
     });
   }
+
+  public getUrl() {
+    return this.loadBalancer.loadBalancerDnsName;
+  }
 }

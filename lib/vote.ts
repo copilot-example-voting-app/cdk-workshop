@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as sns from '@aws-cdk/aws-sns';
 import { CloudWatchLogsExtension } from './awslogs-extension';
 import { ServiceDiscovery } from './service-discovery';
+import { HttpLoadBalancer } from './load-balancer';
 
 interface VotingMicroserviceProps {
   ecsEnvironment: extensions.Environment,
@@ -13,6 +14,7 @@ interface VotingMicroserviceProps {
 }
 
 export class VoteService extends cdk.Stack {
+  public voteService: extensions.Service;
   public readonly topic: sns.ITopic;
 
   constructor(scope: cdk.Construct, id: string, props: VotingMicroserviceProps) {
@@ -33,18 +35,18 @@ export class VoteService extends cdk.Stack {
       })],
     }));
 
-    voteServiceDesc.add(new extensions.HttpLoadBalancerExtension());
+    voteServiceDesc.add(new HttpLoadBalancer());
     voteServiceDesc.add(new CloudWatchLogsExtension());
     voteServiceDesc.add(new ServiceDiscovery());
 
-    const service = new extensions.Service(this, 'vote', {
+    this.voteService = new extensions.Service(this, 'vote', {
       environment: props.ecsEnvironment,
       serviceDescription: voteServiceDesc,
     });
 
-    service.connectTo(props.apiService);
+    this.voteService.connectTo(props.apiService);
 
-    const cfnTaskDefinition = service.ecsService.taskDefinition.node.defaultChild as ecs.CfnTaskDefinition;
+    const cfnTaskDefinition = this.voteService.ecsService.taskDefinition.node.defaultChild as ecs.CfnTaskDefinition;
     cfnTaskDefinition.addPropertyOverride('ContainerDefinitions.0.Environment', [{
       Name: 'COPILOT_SNS_TOPIC_ARNS',
       Value: `{"events": "${this.topic.topicArn}"}`,

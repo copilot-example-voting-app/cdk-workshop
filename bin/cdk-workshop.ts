@@ -15,7 +15,7 @@ const apiServiceStack = new APIService(app, "APIServiceWorkshop", {
   serviceDiscoveryName: votingEnvironment.serviceDiscoveryName
 });
 
-const voteService = new VoteService(app, "VoteServiceWorkshop", {
+const voteServiceStack = new VoteService(app, "VoteServiceWorkshop", {
   ecsEnvironment: votingEnvironment.ecsEnvironment,
   serviceDiscoveryName: votingEnvironment.serviceDiscoveryName,
   apiService: apiServiceStack.apiService,
@@ -25,7 +25,7 @@ const processorService = new ProcessorService(app, "ProcessorServiceWorkshop", {
   ecsEnvironment: votingEnvironment.ecsEnvironment,
   serviceDiscoveryName: votingEnvironment.serviceDiscoveryName,
   apiService: apiServiceStack.apiService,
-  topic: voteService.topic
+  topic: voteServiceStack.topic
 });
 
 const resultsServiceStack = new ResultsService(app, "ResultsServiceWorkshop", {

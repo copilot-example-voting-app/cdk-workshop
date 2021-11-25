@@ -443,7 +443,7 @@ Last but not least we need to deploy this stack as well as the changes to the ba
 Run:
 
 ```sh
-cdk deploy -all
+cdk deploy --all
 ```
 
 This time when you deploy you will get a prompt asking you to review what is being created. This is because CDK is going to automatically create IAM roles and a security group for the microservice. This gives you a chance to review the permissions and the port configurations to make sure you agree with the security boundaries that CDK is creating:
@@ -495,6 +495,7 @@ import * as path from 'path';
 import * as sns from '@aws-cdk/aws-sns';
 import { CloudWatchLogsExtension } from './awslogs-extension';
 import { ServiceDiscovery } from './service-discovery';
+import { HttpLoadBalancer } from './load-balancer';
 
 interface VotingMicroserviceProps {
   ecsEnvironment: extensions.Environment,
@@ -503,6 +504,7 @@ interface VotingMicroserviceProps {
 }
 
 export class VoteService extends cdk.Stack {
+  public voteService: extensions.Service;
   public readonly topic: sns.ITopic;
 
   constructor(scope: cdk.Construct, id: string, props: VotingMicroserviceProps) {
@@ -523,18 +525,18 @@ export class VoteService extends cdk.Stack {
       })],
     }));
 
-    voteServiceDesc.add(new extensions.HttpLoadBalancerExtension());
+    voteServiceDesc.add(new HttpLoadBalancer());
     voteServiceDesc.add(new CloudWatchLogsExtension());
     voteServiceDesc.add(new ServiceDiscovery());
 
-    const service = new extensions.Service(this, 'vote', {
+    this.voteService = new extensions.Service(this, 'vote', {
       environment: props.ecsEnvironment,
       serviceDescription: voteServiceDesc,
     });
 
-    service.connectTo(props.apiService);
+    this.voteService.connectTo(props.apiService);
 
-    const cfnTaskDefinition = service.ecsService.taskDefinition.node.defaultChild as ecs.CfnTaskDefinition;
+    const cfnTaskDefinition = this.voteService.ecsService.taskDefinition.node.defaultChild as ecs.CfnTaskDefinition;
     cfnTaskDefinition.addPropertyOverride('ContainerDefinitions.0.Environment', [{
       Name: 'COPILOT_SNS_TOPIC_ARNS',
       Value: `{"events": "${this.topic.topicArn}"}`,
@@ -870,4 +872,248 @@ You can now submit votes using the vote service, and refresh the results service
 
 &nbsp;
 
-### Next steps
+### Deploy a code change
+
+If you click the vote button on the vote app a bunch of times really fast, and then start refreshing the results page you may notice that it takes a while for the votes to trickle in. This is because the vote processor service has some less than efficient code.
+
+Let's make a code change and see how to use CDK to roll that change out.
+
+Open up `service/processor/processor.py`.
+
+<details>
+  <summary>Give me a challenge</summary>
+
+  See if you can figure out what is wrong with this Python code and how to make it faster.
+</details>
+<details>
+  <summary>Show me how to do it</summary>
+
+  It looks like a past employee considered using long polling, but did
+  not implement it. Additionally there is a hardcoded `sleep(1)` in the code
+  which is limiting the processor to only processing one vote per second!
+
+  We can fix this. Remove the sleep statement on line 39 and then modify line 29 to look like this:
+
+  ```python
+  for message in queue.receive_messages(WaitTimeSeconds=20):
+  ```
+
+  This will remove the hardcoded wait time, and instead move the wait to the
+  SQS server side. The server will wait up to 20 seconds for votes to come in. When a vote is available it will return the vote to the processor immeadiately, and the processor will be able to grab it and start working on it right away. This will massively increase throughput. Rather than 1 vote per second, we can process votes as fast as the Python application can make network roundtrips to fetch more from the SQS service.
+</details>
+
+With the code changes made go ahead and run `cdk diff` again.
+
+This time you will see that CDK has detected a code change. It is going to make a change to the container for the processor app, but will leave the rest of the microservice stacks alone.
+
+![images/cdk-diff-processor.png](images/cdk-diff-processor.png)
+
+Run `cdk deploy --all --require-approval never` once again.
+
+Once the CDK deployment is done try using the vote and results services again. This time when you refresh the results page you will see any votes that you sent reflected almost instantly!
+
+![images/vote-and-results.png](images/vote-and-results.png)c
+
+
+&nbsp;
+
+&nbsp;
+
+## Extra challenges
+
+These are open ended challenges that you might consider trying out if you feel like making more changes or deploying more things today.
+
+### Make results page dynamic
+
+Right now you have to refresh the results page manually. What if you could make the results page refresh itself automatically?
+
+[Hint](https://developer.mozilla.org/en-US/docs/Web/API/Location/reload)
+
+### Create a single web gateway to combine both voting and results
+
+The vote service and the results service are on two different URL's but there is no URL overlap between them. The vote service is accessible on the root of the domain, while the results page is on `/results`. This means could potentially use a single reverse proxy service to glue these two services together on one URL. Consider adding a button to the vote service to send users to the /results page on the same domain.
+
+[Hint](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/)
+
+<details>
+  <summary>Show me how to do it</summary>
+
+Create `services/nginx/Dockerfile`
+
+```Dockerfile
+FROM public.ecr.aws/nginx/nginx:latest
+EXPOSE 80
+RUN rm -rf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/templates/nginx.conf.template
+```
+
+This file defines how to build the Nginx service we want to deploy.
+
+Create `service/nginx/nginx.conf`
+```
+  server {
+    server_name "";
+    listen 80 default_server;
+
+    location /results {
+      proxy_pass ${RESULTS_URL}/results;
+    }
+
+    location / {
+      proxy_pass ${VOTE_URL};
+    }
+  }
+```
+
+This is NGINX specific config that creates an NGINX reverse proxy that expects two input environment variables to define the URL of the results service and the vote service.
+
+Now create `lib/nginx.ts`
+
+```ts
+import * as cdk from '@aws-cdk/core';
+import * as ecs from '@aws-cdk/aws-ecs';
+import * as extensions from '@aws-cdk-containers/ecs-service-extensions';
+import { CloudWatchLogsExtension } from './awslogs-extension';
+import { HttpLoadBalancer } from './load-balancer';
+
+interface NginxMicroserviceProps {
+  ecsEnvironment: extensions.Environment,
+  voteService: extensions.Service,
+  resultsService: extensions.Service
+}
+
+export class NginxService extends cdk.Stack {
+  constructor(scope: cdk.Construct, id: string, props: NginxMicroserviceProps) {
+    super(scope, id);
+
+    var voteLoadBalancer = props.voteService.serviceDescription.get('load-balancer') as HttpLoadBalancer;
+    var resultsLoadBalancer = props.resultsService.serviceDescription.get('load-balancer') as HttpLoadBalancer;
+
+    const nginxServiceDesc = new extensions.ServiceDescription();
+    nginxServiceDesc.add(new extensions.Container({
+      cpu: 256,
+      memoryMiB: 512,
+      trafficPort: 80,
+      image: ecs.ContainerImage.fromAsset('./services/nginx/', { file: 'Dockerfile' }),
+      environment: {
+        VOTE_URL: 'http://' + voteLoadBalancer.getUrl(),
+        RESULTS_URL: 'http://' + resultsLoadBalancer.getUrl(),
+      }
+    }));
+
+    nginxServiceDesc.add(new HttpLoadBalancer());
+    nginxServiceDesc.add(new CloudWatchLogsExtension());
+
+    const service = new extensions.Service(this, 'nginx', {
+      environment: props.ecsEnvironment,
+      serviceDescription: nginxServiceDesc,
+    });
+  }
+}
+```
+
+This stack builds and deploys the Nginx container. It also passes in two environment variables that are the URL's of the vote and results service.
+
+And add this new stack to `bin/cdk-workshop.ts`
+```ts
+#!/usr/bin/env node
+import 'source-map-support/register';
+import * as cdk from '@aws-cdk/core';
+import { VotingEnvironment } from '../lib/environment';
+import { APIService } from '../lib/api';
+import { VoteService } from '../lib/vote';
+import { ProcessorService } from '../lib/processor';
+import { ResultsService } from "../lib/results";
+import { NginxService } from "../lib/nginx";
+
+const app = new cdk.App();
+const votingEnvironment = new VotingEnvironment(app, 'VotingEnvironmentWorkshop', {});
+
+const apiServiceStack = new APIService(app, "APIServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  serviceDiscoveryName: votingEnvironment.serviceDiscoveryName
+});
+
+const voteServiceStack = new VoteService(app, "VoteServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  serviceDiscoveryName: votingEnvironment.serviceDiscoveryName,
+  apiService: apiServiceStack.apiService,
+});
+
+const processorService = new ProcessorService(app, "ProcessorServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  serviceDiscoveryName: votingEnvironment.serviceDiscoveryName,
+  apiService: apiServiceStack.apiService,
+  topic: voteServiceStack.topic
+});
+
+const resultsServiceStack = new ResultsService(app, "ResultsServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  serviceDiscoveryName: votingEnvironment.serviceDiscoveryName,
+  apiService: apiServiceStack.apiService
+});
+
+const nginxServiceStack = new NginxService(app, "NginxServiceWorkshop", {
+  ecsEnvironment: votingEnvironment.ecsEnvironment,
+  voteService: voteServiceStack.voteService,
+  resultsService: resultsServiceStack.resultsService
+});
+```
+
+Now do a `cdk diff` and `cdk deploy --all --require-approval never` and check out the URL of this new NGINX service.
+
+You can vote on the root of the domain and access the results at `/results`. Consider adding a button on the voting page for viewing the results.
+
+Inside of `services/vote/templates/index.html`:
+
+```html
+    <br />
+    <br />
+    <a href='/results' class="btn">See the results</a>
+```
+
+Now the microservice deployment is feeling more like a single coherent website!
+</details>
+
+&nbsp;
+
+### Scale up the services and make them autoscale
+
+Right now the microservices are not HA. They are running only a single task. So if they received a big burst of votes you might see latency and issues. See if you can figure out how to scale them up based on traffic.
+
+What about making the queue processor scale based on the number of votes in the queue?
+
+[Hint](https://www.npmjs.com/package/@aws-cdk-containers/ecs-service-extensions)
+
+<details>
+  <summary>Show me how to do it</summary>
+
+Add the following config to the vote, results, and api `Service` construct:
+
+```ts
+desiredCount: 5,
+// Task auto-scaling constuct for the service
+autoScaleTaskCount: {
+  maxTaskCount: 10,
+  targetCpuUtilization: 70,
+  targetMemoryUtilization: 50,
+},
+```
+
+For scaling based on queue depth you will need to create a custom extension. There is an example extension for scaling based on queue depth in the [ecs-service-extensions docs](https://www.npmjs.com/package/@aws-cdk-containers/ecs-service-extensions)
+
+</details>
+
+&nbsp;
+
+&nbsp;
+
+### All done!
+
+If you are done with the workshop steps consider trying one more thing before you go:
+
+```
+cdk destroy --all
+```
+
+CDK will ask for confirmation and then begin tearing down each stack, shutting down all the microservices that you launched today, and cleaning up all the resources, including databases, networking rules, etc.
