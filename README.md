@@ -921,13 +921,49 @@ Once the CDK deployment is done try using the vote and results services again. T
 
 ## Extra challenges
 
-These are open ended challenges that you might consider trying out if you feel like making more changes or deploying more things today.
+These are open ended tasks that you might consider trying out if you feel like learning more, making more changes, or deploying more things today.
+
+&nbsp;
+
+### See how many lines of infrastructure as code were saved by using AWS CDK
+
+Look into the `cdk.out` folder to see the files marked `*.template.json`. These are the raw CloudFormation templates, in JSON format, which are passed off the underlying AWS API to create resources on your behalf.
+
+Sum up the lines of JSON:
+```
+wc -l cdk.out/*.template.json
+```
+
+Compare that to the lines of TypeScript:
+```
+wc -l lib/*.ts
+```
+
+&nbsp;
 
 ### Make results page dynamic
 
-Right now you have to refresh the results page manually. What if you could make the results page refresh itself automatically?
+Right now you have to refresh the results page manually. Can you deploy a change to make the results page refresh itself automatically?
 
 [Hint](https://developer.mozilla.org/en-US/docs/Web/API/Location/reload)
+
+<details>
+  <summary>Show me how to do it</summary>
+
+  Add to `services/results/templates/index.html`
+
+  ```html
+  <script>
+    setTimeout(function () {
+      location.reload();
+    }, 1000);
+  </script>
+  ```
+
+  Then `cdk deploy --all --require-approval never`
+</details>
+
+&nbsp;
 
 ### Create a single web gateway to combine both voting and results
 
