@@ -291,6 +291,7 @@ const votingEnvironment = new VotingEnvironment(app, 'VotingEnvironmentWorkshop'
   git remote add answer https://github.com/nathanpeck/answers-workshop.git
   git fetch answer
   git checkout answer/step-one
+  npm install
   ```
 </details>
 
