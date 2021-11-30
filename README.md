@@ -105,7 +105,7 @@ EOF
 
 Now we need to make sure that the latest version of AWS Cloud Development Kit inside of the Cloud9 development environment.
 
-Run `cdk` to ensure that AWS Cloud Development Kit is preinstalled in this environment. If not try following the [official getting started docs on how to install AWS CDK](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html).
+If you run `cdk` you will see that AWS Cloud Development Kit is preinstalled in this environment. But this is not the latest version. Try following the [official getting started docs on how to install AWS CDK](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html).
 
 <details>
   <summary>Give me a hint</summary>
@@ -219,6 +219,9 @@ Modify the `dependencies` section of the `package.json` file to look like this:
   "source-map-support": "^0.5.16"
 }
 ```
+
+Please make sure you are using version `1.130.0` in the package.json and that when you run `cdk --version` you see version 1.130.0 or later.
+
 You can also refer to `sample-workshop/package.json` for a reference of what the full `package.json` file should look like.
 
 Make sure you run `npm install` to install the dependencies.
