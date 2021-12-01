@@ -118,10 +118,10 @@ If you run `cdk` you will see that AWS Cloud Development Kit is preinstalled in 
   <summary>Show me how to do it</summary>
 
   ```
-    npm upgrade -g aws-cdk
+    nvm install v16.3.0
+    npm install -g aws-cdk
     cdk --version
     cdk bootstrap aws://{ACCOUNT}/us-west-2
-    nvm install node
   ```
 
   You can get your account ID from the AWS console by clicking the dropdown in the upper right:
